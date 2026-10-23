@@ -40,7 +40,7 @@ and keeps a log in Google Sheets.
 ## Screenshots
 
 ### Workflow Canvas
-![Workflow canvas]()
+![Workflow canvas](Screenshot 2026-10-23 185224.png)
 
 
 ## Note
