@@ -37,6 +37,12 @@ and keeps a log in Google Sheets.
    `YOUR_EMAIL_ADDRESS` with your email.
 6. Click **Execute** to test, then **Publish** to run it daily.
 
+## Screenshots
+
+### Workflow Canvas
+![Workflow canvas]()
+
+
 ## Note
 
 Personal details (Sheet ID and email address) have been replaced with
