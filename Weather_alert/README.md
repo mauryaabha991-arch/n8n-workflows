@@ -90,6 +90,11 @@ Chance of rain: {{ $json.rainChance }}%
 Connected to the **error output** of the HTTP Request node. If the API call fails, it sends an email with the subject **"weather check failed"** and the error message, so failures are never silent.
 
 
+## canvas results
+
+![workflow canvas](screenshot.png)
+
+
 
 ## How to use
 1. Sign up at [openweathermap.org](https://openweathermap.org/api) and get a free API key.
