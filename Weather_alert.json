@@ -1,0 +1,246 @@
+{
+  "name": "Weather_alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bf0591d5-b58d-4303-b83c-82e0d0cde7fe",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "889fa88d-375d-417a-ad00-48b448c13ac7",
+              "leftValue": "={{ $json.rainExpected }}",
+              "rightValue": "rain,drizzle,thunderstrom",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        896,
+        0
+      ],
+      "id": "c855f8f8-4288-4a91-9dff-a8fda9699760",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  { json: { city: 'Varanasi,IN' } },\n  { json: { city: 'Lucknow,IN' } },\n  { json: { city: 'Delhi,IN' } }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "b04061c9-f9ca-4749-b629-e364ca36a322",
+      "name": "All_CIty_Node"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const d = $json;\nconst next = d.list;                       // next 24 hours\nconst rainWords = ['Rain', 'Drizzle', 'Thunderstorm'];\nconst rainy = next.filter(e => rainWords.includes(e.weather[0].main));\nconst slot = rainy[0] || next[0];\n\nreturn { json: {\n  city: d.city.name,\n  checkedAt: $now.toFormat('yyyy-MM-dd HH:mm'),\n  rainExpected: rainy.length > 0,\n  condition: slot.weather[0].description,\n  temperature: slot.main.temp,\n  humidity: slot.main.humidity,\n  windSpeed: slot.wind.speed,\n  rainTime: rainy.length ? slot.dt_txt : '',\n  rainChance: Math.round(Math.max(...next.map(e => e.pop || 0)) * 100)\n}};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "3462b481-cb1c-49e8-9a60-0e47e43100fd",
+      "name": "Filter_parameter_node"
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL",
+        "subject": "Weather-Alert",
+        "message": "=Rain expected in {{ $json.city }} around {{ $json.rainTime }} Condition: {{ $json.condition }} Temperature: {{ $json.temperature }} °C Humidity: {{ $json.humidity }}% Wind: {{ $json.windSpeed }} m/s Chance of rain: {{ $json.rainChance }}%",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        -96
+      ],
+      "id": "774df07a-f218-429e-b493-d07fdf4a14f7",
+      "name": "success_message_node",
+      "webhookId": "d5796aa5-1393-4ac0-a4d6-97cad749ce12",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "WsAOz0184I9bqd18",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL",
+        "subject": "weather check failed",
+        "message": "={{ $json.error.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        224
+      ],
+      "id": "1cbb6a60-8cd6-4cb6-89a0-81f4c25a6dd5",
+      "name": "Error_message_node",
+      "webhookId": "61ac3e15-65ae-4ea1-ba41-dda2edf6b038",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "WsAOz0184I9bqd18",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.city }}"
+            },
+            {
+              "name": "appid",
+              "value": "YOUR_API_KEY"
+            },
+            {
+              "name": "units",
+              "value": "metric"
+            },
+            {
+              "name": "cnt",
+              "value": "8"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "27265491-e8fb-4a88-adc9-1936eb8e7af9",
+      "name": "HTTP RequestTO_weathermap",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "All_CIty_Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "success_message_node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All_CIty_Node": {
+      "main": [
+        [
+          {
+            "node": "HTTP RequestTO_weathermap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter_parameter_node": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP RequestTO_weathermap": {
+      "main": [
+        [
+          {
+            "node": "Filter_parameter_node",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error_message_node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4c05e03d-9688-4d40-8c71-2507c79529d3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "94ee0f325feac4de694b7701b4254d2d06dc83e7983b94f81626e0bef19807d6"
+  },
+  "nodeGroups": [],
+  "id": "oYEUtJQwiqhJ6GRd",
+  "tags": []
+}
