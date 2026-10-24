@@ -12,7 +12,7 @@ An n8n workflow that checks the weather forecast for the next 24 hours every mor
 
 ## Workflow
 
-![Workflow canvas](screenshot.png)
+![Workflow canvas](WorkflowScreenshot.png)
 
 ```
 Schedule Trigger → All_CIty_Node → HTTP RequestTO_weathermap → Filter_parameter_node → If → success_message_node
