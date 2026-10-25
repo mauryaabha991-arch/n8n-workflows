@@ -56,8 +56,8 @@ Create a sheet with these headers in row 1:
 
 ```json
 {
-  "name": "Rahul Sharma",
-  "email": "rahul@example.com",
+  "name": "Abha maurya",
+  "email": "abha@example.com",
   "phone": "9876543210",
   "message": "Hello, this is a test",
   "source": "postman"
@@ -81,7 +81,7 @@ Create a sheet with these headers in row 1:
 ```bash
 curl -X POST "https://<your-n8n-domain>/webhook/<your-webhook-path>" \
   -H "Content-Type: application/json" \
-  -d '{"name":"Rahul Sharma","email":"rahul@example.com","phone":"9876543210","message":"Hello","source":"curl"}'
+  -d '{"name":"Abha maury","email":"abha@example.com","phone":"9876543210","message":"Hello","source":"curl"}'
 ```
 
 ## Setup
@@ -121,31 +121,25 @@ Each form includes a hidden `source` field (`form1` and `form2`). Both forms use
 
 | | |
 |---|---|
-| Workflow canvas | ![Workflow canvas](screenshots/01-workflow-canvas.png) |
-| Successful execution | ![Execution](screenshots/02-execution-success.png) |
-| Google Sheet with rows | ![Google Sheet](screenshots/03-google-sheet.png) |
-| Postman success | ![Postman success](screenshots/04-postman-success.png) |
-| Postman error | ![Postman error](screenshots/05-postman-error.png) |
-| HTML form success | ![Form success](screenshots/06-form-success.png) |
-| Confirmation email | ![Email](screenshots/07-confirmation-email.png) |
+| Workflow canvas | ![Workflow canvas](screenshots.png) |
 
-Rename the files in `screenshots/` to match these names, or edit the paths above.
+
+Rename the files in `screenshot/` to match these names, or edit the paths above.
 
 ## Project structure
 
 ```
 .
 ├── README.md
-├── .gitignore
+
 ├── workflow/
 │   └── webhook-to-google-sheets.json
 ├── forms/
 │   ├── contact-form.html
 │   └── contact-form-success.html
 ├── screenshots/
-│   └── (workflow, execution, sheet, postman, form and email images)
-└── docs/
-    └── explanation.pdf
+│   └── (workflow)
+
 ```
 
 ## Security notes
@@ -158,7 +152,6 @@ Rename the files in `screenshots/` to match these names, or edit the paths above
 
 n8n, Google Sheets API, Gmail API, HTML, CSS, JavaScript (fetch), Postman
 
-## Author
 
-**Your Name**
-GitHub: [@your-username](https://github.com/your-username)
+
+
