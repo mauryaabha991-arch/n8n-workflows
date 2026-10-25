@@ -119,10 +119,7 @@ Each form includes a hidden `source` field (`form1` and `form2`). Both forms use
 
 ## Screenshots
 
-| | |
-|---|---|
-| Workflow canvas | !(Screenshots.png) |
-
+![Workflow canvas](Screenshot.png)
 
 Rename the files in `screenshot/` to match these names, or edit the paths above.
 
