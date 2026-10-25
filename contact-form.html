@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact form</title>
+<style>
+  :root { --bg:#f3f5f7; --card:#ffffff; --text:#1d2733; --muted:#5b6876; --line:#cfd6dd; --accent:#1f6f5c; --err:#b3261e; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; background:var(--bg); color:var(--text); font-family:"Segoe UI", Roboto, Arial, sans-serif; }
+  form { width:100%; max-width:440px; background:var(--card); padding:32px; border:1px solid var(--line); border-radius:8px; }
+  h1 { margin:0 0 4px; font-size:1.5rem; }
+  p.sub { margin:0 0 24px; color:var(--muted); }
+  label { display:block; margin:16px 0 6px; font-weight:600; font-size:.95rem; }
+  input, textarea { width:100%; padding:10px 12px; font:inherit; color:var(--text); border:1px solid var(--line); border-radius:6px; background:#fff; }
+  input:focus, textarea:focus, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  textarea { min-height:110px; resize:vertical; }
+  button { margin-top:24px; width:100%; padding:12px; font:inherit; font-weight:600; color:#fff; background:var(--accent); border:0; border-radius:6px; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  #status { margin-top:16px; min-height:1.4em; font-weight:600; }
+  #status.ok { color:var(--accent); }
+  #status.error { color:var(--err); }
+</style>
+</head>
+<body>
+<form id="contactForm" novalidate>
+  <input type="hidden" name="source" value="form1">
+  <h1>Get in touch</h1>
+  <p class="sub">Send us a message and we’ll reply by email.</p>
+
+  <label for="name">Name</label>
+  <input id="name" name="name" type="text" autocomplete="name" required>
+
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" autocomplete="email" required>
+
+  <label for="phone">Phone</label>
+  <input id="phone" name="phone" type="tel" autocomplete="tel">
+
+  <label for="message">Message</label>
+  <textarea id="message" name="message"></textarea>
+
+  <button type="submit" id="btn">Send message</button>
+  <div id="status" role="status" aria-live="polite"></div>
+</form>
+
+<script>
+  // PASTE YOUR n8n PRODUCTION URL HERE (it contains /webhook/ and NOT /webhook-test/)
+  const WEBHOOK_URL = "YOUR_PRODUCTION_URL";
+
+  const form = document.getElementById("contactForm");
+  const btn = document.getElementById("btn");
+  const status = document.getElementById("status");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    status.className = "";
+    status.textContent = "";
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        status.className = "ok";
+        status.textContent = result.message || "Message sent.";
+        form.reset();
+      } else {
+        status.className = "error";
+        status.textContent = result.message || "Something went wrong. Please try again.";
+      }
+    } catch (err) {
+      status.className = "error";
+      status.textContent = "Could not reach the server. Check the webhook URL and CORS setting.";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Send message";
+    }
+  });
+</script>
+</body>
+</html>
