@@ -1,0 +1,690 @@
+{
+  "name": "Lead Classification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        -16
+      ],
+      "id": "e357b037-5d97-4bac-85a9-bd56d0d24688",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\n\nfor (const item of $input.all()) {\n  // Webhook data arrives under body\n  const src = item.json.body || item.json;\n\n  const name  = String(src.name  ?? '').trim();\n  const email = String(src.email ?? '').trim().toLowerCase();\n  const phone = String(src.phone ?? '').trim();\n  const notes = String(src.notes ?? '').trim();\n\n  // Clean budget: remove commas, currency symbols, spaces\n  const rawBudget = String(src.budget ?? '').replace(/[^0-9.]/g, '');\n  const budget = rawBudget === '' ? null : Number(rawBudget);\n\n  // Validation checks\n  const emailValid  = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\n  const budgetValid = budget !== null && !isNaN(budget) && budget >= 0;\n\n  const issues = [];\n  if (!name) issues.push('missing name');\n  if (!emailValid) issues.push('missing/invalid email');\n  if (!budgetValid) issues.push('missing/invalid budget');\n\n  // Keyword detection (easy to modify: edit this list)\n  const HOT_KEYWORDS = ['urgent', 'immediate', 'immediately', 'asap'];\n  const hasHotKeyword = HOT_KEYWORDS.some(k => notes.toLowerCase().includes(k));\n\n  // Score out of 10\nlet score = 0;\nif (budgetValid) {\n  if (budget >= 100000) score += 5;\n  else if (budget > 50000) score += 4;\n  else if (budget >= 10000) score += 3;\n  else if (budget > 0) score += 1;\n}\nif (hasHotKeyword) score += 2;\nif (emailValid) score += 1;\nif (phone.replace(/\\D/g, '').length >= 10) score += 1;\nif (notes.length > 20) score += 1;\nscore = Math.max(1, Math.min(10, score));\n\n  out.push({\n    json: {\n      name,\n      email,\n      phone,\n      budget: budgetValid ? budget : null,\n      notes,\n    \n      hasHotKeyword,\n      score,\n      isIncomplete: issues.length > 0,\n      issues: issues.join(', '),\n      receivedAt: new Date().toISOString()\n    }\n  });\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        -16
+      ],
+      "id": "eb6e6822-ba5e-4f3a-9340-c6204a90d938",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\" : \"success\",\n  \"message\" : \"Submitted successfully\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2704,
+        16
+      ],
+      "id": "11772e51-42e0-49f4-babf-9728438727f0",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "73f57394-fd72-4146-a0ac-e2adb7e9257e",
+              "leftValue": "={{ $json.isIncomplete }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "87fc4dfe-f147-4bdd-a0ba-780b1a3f9ba2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.budget > 50000 || $json.hasHotKeyword || String($json.output ?? $json.text ?? '').toLowerCase().includes('high') }}",
+                    "rightValue": 50000,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "7281cab9-0657-4cde-8eda-05ecc22b0e4f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hot"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "c60a744f-8f9a-4653-b700-4a02403ecd3f",
+                    "leftValue": "={{ $json.budget >= 10000 && $json.budget <= 50000 }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Warm"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "5976f8c3-2241-4214-9201-d22ff9192d9b",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fc73926e-04cf-424b-8007-6fefbb84ca2e",
+              "name": "category",
+              "value": "Cold",
+              "type": "string"
+            },
+            {
+              "id": "8a78aa28-db6d-4cc8-83a6-50116f7501c9",
+              "name": "scoreReason",
+              "value": "Low budget or missing data",
+              "type": "string"
+            },
+            {
+              "id": "8650cd74-31a2-403d-8940-a70d17c49160",
+              "name": "intent",
+              "value": "={{ String($json.output ?? $json.text ?? 'N/A').trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1712,
+        208
+      ],
+      "id": "dda53121-7f14-4936-b90d-8ba6891d8252",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b048fda4-d483-4b43-acd6-dcc26910badc",
+              "name": "category",
+              "value": "Hot",
+              "type": "string"
+            },
+            {
+              "id": "883e85de-211c-4cc4-8416-27f5b8ff0192",
+              "name": "intent",
+              "value": "={{ String($json.output ?? $json.text ?? 'N/A').trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1712,
+        -160
+      ],
+      "id": "7cdfad65-ef87-486c-8c37-f2d5e0e54f41",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c20219e9-ddca-4ab2-8e25-000c7588a557",
+              "name": "category",
+              "value": "Warm",
+              "type": "string"
+            },
+            {
+              "id": "a6f21e40-ef36-40be-a28e-e613f9e302bc",
+              "name": "intent",
+              "value": "={{ String($json.output ?? $json.text ?? 'N/A').trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1712,
+        16
+      ],
+      "id": "bc8599bc-ec18-4d40-85b1-bf0469fd237d",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1968,
+        0
+      ],
+      "id": "4c074572-5121-4ddd-a5c1-6498e40a46fc",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Phone": "={{ $json.phone }}",
+            "Budget": "={{ $json.budget }}",
+            "Notes": "={{ $json.notes }}",
+            "Issues": "={{ $json.issues }}",
+            "Category": "={{ $json.category }}",
+            "Receive At": "={{ $json.receivedAt }}",
+            "Scores": "={{ $json.score }}",
+            "Intent": "={{ String($json.output ?? $json.text ?? 'N/A').trim() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Issues",
+              "displayName": "Issues",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Receive At",
+              "displayName": "Receive At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Scores",
+              "displayName": "Scores",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Intent",
+              "displayName": "Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2256,
+        16
+      ],
+      "id": "c43082e7-e745-4341-a4a0-ae28c6f58cda",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "sendTo": "your-email@example.com",
+        "subject": "=🔥 Hot Lead: {{ $json.name }} ({{ $json.score }}/10)",
+        "message": "=<h2 style=\"color:#d93025;\">🔥 New HOT Lead</h2>\n<table cellpadding=\"6\" style=\"border-collapse:collapse;font-family:Arial;\">\n  <tr><td><b>Name</b></td><td>{{ $json.name }}</td></tr>\n  <tr><td><b>Email</b></td><td>{{ $json.email }}</td></tr>\n  <tr><td><b>Phone</b></td><td>{{ $json.phone }}</td></tr>\n  <tr><td><b>Budget</b></td><td>₹{{ $json.budget ? Number($json.budget).toLocaleString('en-IN') : 'N/A' }}</td></tr>\n  <tr><td><b>Score</b></td><td>{{ $json.score }}/10</td></tr>\n  <tr><td><b>Intent</b></td><td>{{ String($json.output ?? $json.text ?? 'N/A').trim() }}</td></tr>\n  <tr><td><b>Notes</b></td><td>{{ $json.notes || 'No notes provided' }}</td></tr>\n</table>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2368,
+        -160
+      ],
+      "id": "14e0b002-1917-4792-b708-efcf570d76ed",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "895d4253-c001-4322-8ea3-45a8980dd410",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "=Hot",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        2128,
+        -144
+      ],
+      "id": "8b58da91-3230-4713-a561-f07309359406",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Lead note: {{ $json.notes }}",
+        "options": {
+          "systemMessage": "You are a helpful assistant. You classify the buying intent of a sales lead from their note.\nReply with exactly one word and nothing else: High, Medium, or Low.\n\nHigh = ready to buy soon, urgent, asking for a quote, pricing, or a demo.\nMedium = interested but still exploring.\nLow = vague, just browsing, empty note, or no real intent.\n\nDo not explain. Do not add punctuation. Output only one word."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        704,
+        96
+      ],
+      "id": "40f1cffe-89fa-4f88-91e6-702b8e278b0e",
+      "name": "AI Agent",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        272
+      ],
+      "id": "4b76dd17-012a-4b7e-bb84-f23a2e065b79",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1008,
+        0
+      ],
+      "id": "00244fe2-ec62-4aa9-b0f2-b1eecb0e3daa",
+      "name": "MergeAI"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "MergeAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "MergeAI",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MergeAI": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {},
+  "nodeGroups": [],
+  "tags": []
+}
