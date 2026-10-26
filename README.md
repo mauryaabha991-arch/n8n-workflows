@@ -7,10 +7,12 @@ A collection of my n8n automation workflows. Each workflow has its own folder wi
 | [RSS_News](RSS_News) | Emails the top 3 headlines every morning from BBC News and The Verge, with duplicate protection via Google Sheets |
 | [Weather_alert](Weather_alert) | Emails a rain alert every morning at 7 AM for multiple cities using the OpenWeatherMap 24-hour forecast, with error alerts |
 | [Webhook_toGoogleSheet](Webhook_toGoogleSheet) | Receives form data through a webhook, validates the email, saves it to Google Sheets with a timestamp and source, and sends a confirmation email |
+| [Lead_Classification_workflow](Lead_Classification_workflow) | Receives leads through a webhook, validates and scores them (1-10), uses Gemini AI to read buying intent, classifies each as Hot, Warm, or Cold, saves to Google Sheets, and emails an alert for every Hot lead |
+
 
 ## Tools used
 
-n8n, Google Sheets, Gmail, OpenWeatherMap API, RSS feeds, Webhooks
+n8n, Google Sheets, Gmail, OpenWeatherMap API, RSS feeds, Webhooks,Google Gemini
 
 ## How to use a workflow
 
