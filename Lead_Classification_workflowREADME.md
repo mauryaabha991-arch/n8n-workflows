@@ -102,8 +102,8 @@ Send a `POST` request with a JSON body:
 curl -X POST "https://YOUR-N8N-HOST/webhook/lead-intake" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Rahul Sharma",
-    "email": "rahul@example.com",
+    "name": "abha maurya",
+    "email": "abha@example.com",
     "phone": "9876543210",
     "budget": 75000,
     "notes": "Need this urgent"
@@ -151,6 +151,4 @@ While building, use the **Test URL** (`/webhook-test/...`) and click **Listen fo
 
 n8n, Google Sheets, Gmail, Google Gemini, JavaScript (Code node)
 
-## License
 
-MIT (or your preferred license)
