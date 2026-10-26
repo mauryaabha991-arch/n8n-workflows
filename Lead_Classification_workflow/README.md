@@ -24,6 +24,10 @@ Webhook → Code (clean, validate, score) ─┬→ AI Agent (intent) ─┐
                                               Else → Edit Fields (Cold)  ────┤        └→ If1 (Hot?) → Gmail alert
 ```
 
+
+### Workflow Canvas
+![Workflow canvas](Screenshot.png)
+
 ## Classification rules
 
 | Category | Condition |
