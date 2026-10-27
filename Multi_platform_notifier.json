@@ -1,0 +1,637 @@
+{
+  "name": "Multi_platform_notifier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "notify",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -288,
+        80
+      ],
+      "id": "d8f16a0b-6427-47ba-a81f-3f451928df7c",
+      "name": "Webhook",
+      "webhookId": "REMOVED"
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@example.com",
+        "subject": "=[{{ $json.priority }}] {{ $json.subject }}",
+        "message": "=<h2>{{ $json.subject }}</h2>\n<p><b>Priority:</b> {{ $json.priority }}</p> \n<p>{{ $json.message }}</p> <hr> >",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        -128
+      ],
+      "id": "59e5c2e8-ca72-4584-a9cd-615bd68abe94",
+      "name": "Send a message",
+      "webhookId": "REMOVED",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Your credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "YOUR_SLACK_CHANNEL_ID",
+          "mode": "list",
+          "cachedResultName": "your-slack-channel"
+        },
+        "text": "=:rotating_light: *{{ $json.subject }}*\n*Priority:* {{ $json.priority }}\n\n{{ $json.message }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        432,
+        64
+      ],
+      "id": "e9f4a79b-3dc5-4bf6-bf97-7dc148b697d7",
+      "name": "Send a message1",
+      "webhookId": "REMOVED",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "YOUR_SLACK_CREDENTIAL_ID",
+          "name": "Your credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🚨 <b>{{ $json.subject }}</b> \n<b>Priority:</b> {{ $json.priority }} \n\n{{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        272
+      ],
+      "id": "b84e22d1-dd1e-41d5-8ba3-ecbdb9e2a5c7",
+      "name": "Send a text message",
+      "webhookId": "REMOVED",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Your credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst p = String(body.priority || 'low').trim().toLowerCase();\n\nconst routes = {\n  high:   ['email', 'slack', 'telegram'],\n  medium: ['slack', 'telegram'],\n  low:    ['slack']\n};\n\nconst emojis = { high: '🔴', medium: '🟠', low: '🟢' };\nconst key = routes[p] ? p : 'low';\n\nreturn [{\n  json: {\n    subject: body.subject,\n    message: body.message,\n    priority: key.charAt(0).toUpperCase() + key.slice(1),\n    emoji: emojis[key],\n    platforms: routes[key],\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        80
+      ],
+      "id": "0a2e9bad-1c07-4da2-b7ab-5f2b428b7e7f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "351dc7c6-0d54-4bbf-a4da-20e6e5473d6b",
+              "leftValue": "={{ $json.platforms }}",
+              "rightValue": "=email",
+              "operator": {
+                "type": "array",
+                "operation": "contains",
+                "rightType": "any"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        -112
+      ],
+      "id": "0a8ed77c-dd43-41ea-9504-bb7789689754",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "1cb4818e-3f41-4954-abda-78425d012add",
+              "leftValue": "={{ $json.platforms }}",
+              "rightValue": "=slack",
+              "operator": {
+                "type": "array",
+                "operation": "contains",
+                "rightType": "any"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        80
+      ],
+      "id": "0c1d4f3f-8f3a-4608-830b-bf0f57053f24",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "9c49c856-e621-4115-8e63-73c0d3e4ac40",
+              "leftValue": "={{ $json.platforms }}",
+              "rightValue": "=telegram",
+              "operator": {
+                "type": "array",
+                "operation": "contains",
+                "rightType": "any"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        288
+      ],
+      "id": "915f8fbe-4ac3-40aa-88c9-a08dedda6897",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9d9cb987-3c26-467f-9ea5-9e759c3a3b9a",
+              "name": "Platform",
+              "value": "email",
+              "type": "string"
+            },
+            {
+              "id": "364db7eb-11d2-4077-941a-56318cba5a9b",
+              "name": "Status",
+              "value": "={{ $json.error ? 'Failed' : 'Sent' }}",
+              "type": "string"
+            },
+            {
+              "id": "3c79f3bf-71cd-4827-96f7-6d48f92eee36",
+              "name": "Details",
+              "value": "={{ $json.error ? JSON.stringify($json.error) : 'OK' }}",
+              "type": "string"
+            },
+            {
+              "id": "ae62d65c-765b-429e-b45b-add1f492f3b4",
+              "name": "Subject",
+              "value": "={{ $('If').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "4d5c51bc-f761-4682-8c9e-85ec5e0404a1",
+              "name": "Priority",
+              "value": "={{ $('If').item.json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "114780ac-dcb0-47e4-babe-8bae678bbb43",
+              "name": "timestamp",
+              "value": "={{ $('If').item.json.timestamp }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        656,
+        -128
+      ],
+      "id": "523a6f1c-8a3b-41f6-8b2e-b3ace16f112d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "24465440-43b2-4ba3-8856-1a726559a605",
+              "name": "Platform",
+              "value": "slack",
+              "type": "string"
+            },
+            {
+              "id": "71f2c9ba-e348-4340-b219-f7dde4e7056a",
+              "name": "Status",
+              "value": "={{ $json.error ? 'Failed' : 'Sent' }}",
+              "type": "string"
+            },
+            {
+              "id": "68825a31-1ec0-4be3-a886-4b72a0a0cde8",
+              "name": "Details",
+              "value": "={{ $json.error ? JSON.stringify($json.error) : 'OK' }}",
+              "type": "string"
+            },
+            {
+              "id": "fef8b1d3-7494-443e-bae1-c51276e0d1cf",
+              "name": "Subject",
+              "value": "={{ $('If1').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "49334ce4-c880-4761-bd75-d5b9f5df2829",
+              "name": "Priority",
+              "value": "={{ $('If1').item.json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "058d8ffe-2e2d-4f9a-bf53-dee7416c2cd2",
+              "name": "timestamp",
+              "value": "={{ $('If1').item.json.timestamp }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        656,
+        64
+      ],
+      "id": "ef61215f-3b18-427e-8184-4191e0f95dec",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "37accf14-098e-4835-9b81-ca7ef7840003",
+              "name": "Platform",
+              "value": "telegram",
+              "type": "string"
+            },
+            {
+              "id": "faa2e89a-48af-4d99-bc92-5c51d6d6a9ea",
+              "name": "Status",
+              "value": "={{ $json.error ? 'Failed' : 'Sent' }}",
+              "type": "string"
+            },
+            {
+              "id": "1d0b824f-4c36-4854-a5be-b22640edafa4",
+              "name": "Details",
+              "value": "={{ $json.error ? JSON.stringify($json.error) : 'OK' }}",
+              "type": "string"
+            },
+            {
+              "id": "4808d538-f627-4d69-af0d-186fff323ee4",
+              "name": "Subject",
+              "value": "={{ $('If2').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "61c4c464-6c09-4b33-a617-a1f01ffce457",
+              "name": "Priority",
+              "value": "={{ $('If2').item.json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "46dbc7f6-c2f0-45a0-b8a8-e8166ed497c3",
+              "name": "timestamp",
+              "value": "={{ $('If2').item.json.timestamp }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        672,
+        272
+      ],
+      "id": "b920ab93-afa9-4fbc-afe8-777f097cd34e",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Notification Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Platform": "={{ $json.Platform }}",
+            "Status": "={{ $json.Status }}",
+            "Detail": "={{ $json.Details }}",
+            "Subject": "={{ $json.Subject }}",
+            "Priority": "={{ $json.Priority }}",
+            "timestamp": "={{ $json.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Detail",
+              "displayName": "Detail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        944,
+        64
+      ],
+      "id": "c5705621-a10c-4206-9858-824b0c00a2ad",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_SHEETS_CREDENTIAL_ID",
+          "name": "Your credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "REMOVED",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "REMOVED"
+  },
+  "nodeGroups": [],
+  "id": "REMOVED",
+  "tags": []
+}
