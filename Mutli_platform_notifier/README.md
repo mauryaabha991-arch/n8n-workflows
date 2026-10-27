@@ -145,6 +145,3 @@ While testing, use the **Test URL** (`/webhook-test/notify`) and click **Execute
 - Do not commit screenshots or exports that show real tokens, chat IDs, email addresses or sheet URLs.
 - Consider adding header authentication to the Webhook node before exposing it publicly, otherwise anyone with the URL can send notifications.
 
-## License
-
-MIT
