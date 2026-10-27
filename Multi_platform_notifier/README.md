@@ -19,7 +19,13 @@ An [n8n](https://n8n.io) workflow that takes **one webhook request** and broadca
                          ┌─> If (email?)    ─> Gmail    ─> Edit Fields  ──┐
 Webhook ─> Code (route) ─┼─> If1 (slack?)   ─> Slack    ─> Edit Fields1 ──┼─> Google Sheets
                          └─> If2 (telegram?)─> Telegram ─> Edit Fields2 ──┘   (Append Row)
+
+
 ```
+### Workflow Canvas
+![Workflow canvas](Screenshot.png)
+
+
 
 ## Routing rules
 
