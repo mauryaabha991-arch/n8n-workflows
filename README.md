@@ -8,11 +8,11 @@ A collection of my n8n automation workflows. Each workflow has its own folder wi
 | [Weather_alert](Weather_alert) | Emails a rain alert every morning at 7 AM for multiple cities using the OpenWeatherMap 24-hour forecast, with error alerts |
 | [Webhook_toGoogleSheet](Webhook_toGoogleSheet) | Receives form data through a webhook, validates the email, saves it to Google Sheets with a timestamp and source, and sends a confirmation email |
 | [Lead_Classification_workflow](Lead_Classification_workflow) | Receives leads through a webhook, validates and scores them (1-10), uses Gemini AI to read buying intent, classifies each as Hot, Warm, or Cold, saves to Google Sheets, and emails an alert for every Hot lead |
-
+| [Multi_platform_notifier](Multi_platform_notifier) | Receives a notification through a webhook (subject, message, priority), routes it by priority (High, Medium or Low) to Gmail, Slack and Telegram in parallel, retries failed deliveries, and logs every attempt with status and timestamp to Google Sheets |
 
 ## Tools used
 
-n8n, Google Sheets, Gmail, OpenWeatherMap API, RSS feeds, Webhooks,Google Gemini
+n8n, Google Sheets, Gmail, OpenWeatherMap API, RSS feeds, Webhooks,Google Gemini,Slack,Telegram
 
 ## How to use a workflow
 
