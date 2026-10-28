@@ -26,6 +26,9 @@ Schedule Trigger
         └──(error)───> Edit Fields2 -> Google Sheets (error log, Sheet2)
 ```
 
+### Workflow Canvas
+![Workflow canvas](Screenshot.png)
+
 | Node | Purpose |
 |---|---|
 | Schedule Trigger | Starts the workflow every 6 hours |
