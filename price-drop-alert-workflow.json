@@ -1,0 +1,559 @@
+{
+  "name": "Price Drop Alert Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        176,
+        16
+      ],
+      "id": "1f33ea19-0b4c-4801-95b0-d147f59e664c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.productUrl }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        528,
+        16
+      ],
+      "id": "857c34bd-dfca-4fd4-99df-2fee849a04e2",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "notesInFlow": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a175d3e8-4835-4b31-9763-6c45e0d3dc11",
+              "name": "productName",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "a7c6b5ff-e54f-4bad-aa4f-c65090076fc8",
+              "name": "price",
+              "value": "={{ $json.price }}",
+              "type": "number"
+            },
+            {
+              "id": "a1d7301a-91c2-4df4-88e8-8d2042f88767",
+              "name": "availability",
+              "value": "={{ $json.availabilityStatus }}",
+              "type": "string"
+            },
+            {
+              "id": "06dc726e-33c7-4218-94f2-a43a83d4cdac",
+              "name": "threshold",
+              "value": "={{ $('Code in JavaScript').item.json.threshold }}",
+              "type": "number"
+            },
+            {
+              "id": "e4dca4c7-4cab-42ce-977b-618e52207c04",
+              "name": "productLink",
+              "value": "={{ $('Code in JavaScript').item.json.productUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "057908ff-b18d-4094-8454-e0997dd4ce1e",
+              "name": "checkAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "631748f5-0c5e-4796-a38a-411b2ac2ca77",
+              "name": "productId",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        720,
+        0
+      ],
+      "id": "e9c3d523-8f9a-430d-b88b-cfeeeee7f3c9",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "9a5694ae-a8c5-4bdb-b157-b9ee42a1006f",
+              "leftValue": "={{ $json.sendAlert }}",
+              "rightValue": "={{ $json.threshold }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "ab9c0d18-6e49-4be7-a7e3-d62ab7f9cd01",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🔔 Price Drop Alert!\nProduct: {{ $json.productName }}\nCurrent price: ${{ $json.price }}\nPrevious price: ${{ $json.previousPrice }}\nTrend: {{ $json.trend }}\nYour threshold: ${{ $json.threshold }}\nAvailability: {{ $json.availability }}\nLink: {{ $json.productLink }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1520,
+        -16
+      ],
+      "id": "6a3ffc87-0fee-418f-b9bd-6b7943842bc0",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Product": "={{ $('If').item.json.productName }}",
+            "Price": "={{ $('If').item.json.price }}",
+            "Threshold": "={{ $('If').item.json.threshold }}",
+            "Availability": "={{ $('If').item.json.availability }}",
+            "Timestamp": "={{ $('If').item.json.checkAt }}",
+            "Status": "={{ $json.status }}",
+            "PreviousPrice": "={{ $json.previousPrice }}",
+            "Trend": "={{ $json.trend }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Threshold",
+              "displayName": "Threshold",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Availability",
+              "displayName": "Availability",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PreviousPrice",
+              "displayName": "PreviousPrice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Trend",
+              "displayName": "Trend",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1696,
+        208
+      ],
+      "id": "8800370d-3652-469f-b5e8-57ba7023f8d7",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "521c958c-c48d-43e2-98a0-4d60fa795fea",
+              "name": "errorMessage",
+              "value": "={{ $json.error.message }}",
+              "type": "string"
+            },
+            {
+              "id": "d7b882c5-6244-4451-9e6b-35f0ef92917d",
+              "name": "checkAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        736,
+        224
+      ],
+      "id": "9a35f726-d283-4f9b-9c2c-53afde9378af",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet2",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Product": "={{ $('Code in JavaScript').item.json.productId }}",
+            "Status": "={{ $json.error?.message || $json.error || 'Unknown error' }}",
+            "Timestamp": "={{ $json.checkAt }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Price",
+              "displayName": "Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Threshold",
+              "displayName": "Threshold",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Availability",
+              "displayName": "Availability",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        928,
+        224
+      ],
+      "id": "82f7e17e-44b5-4091-a388-c98c99facab0",
+      "name": "Append row in sheet1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  { json: { productId: 1, threshold: 15, productUrl: \"https://dummyjson.com/products/1\" } },\n  { json: { productId: 2, threshold: 10, productUrl: \"https://dummyjson.com/products/2\" } },\n  { json: { productId: 3, threshold: 8,  productUrl: \"https://dummyjson.com/products/3\" } }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        16
+      ],
+      "id": "6b69e9d0-075f-4858-8f76-a94a32f7da51",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nif (!sd.lastPrice) sd.lastPrice = {};\n\nfor (const item of $input.all()) {\n  const id = item.json.productId;\n  const cur = item.json.price;\n  const prev = sd.lastPrice[id];\n\n  let trend = 'First check';\n  if (prev !== undefined) {\n    if (cur > prev) trend = 'Rising';\n    else if (cur < prev) trend = 'Falling';\n    else trend = 'Stable';\n  }\n\n  item.json.previousPrice = prev ?? '';\n  item.json.trend = trend;\n  sd.lastPrice[id] = cur;\n}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "ca326028-9cea-431c-896a-aa944f46e33d",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nif (!sd.lastAlert) sd.lastAlert = {};\n\nconst COOLDOWN_HOURS = 24;\nconst now = Date.now();\n\nfor (const item of $input.all()) {\n  const id = item.json.productId;\n  const below = item.json.price < item.json.threshold;\n  const hoursSince = (now - (sd.lastAlert[id] || 0)) / 3600000;\n\n  if (!below) {\n    item.json.sendAlert = false;\n    item.json.status = 'Above threshold';\n  } else if (hoursSince >= COOLDOWN_HOURS) {\n    item.json.sendAlert = true;\n    item.json.status = 'Alert sent';\n    sd.lastAlert[id] = now;\n  } else {\n    item.json.sendAlert = false;\n    item.json.status = 'Cooldown (skipped)';\n  }\n}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        0
+      ],
+      "id": "af6e7b71-fdff-4302-95a2-187732bb7583",
+      "name": "Code in JavaScript2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
