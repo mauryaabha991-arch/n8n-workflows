@@ -10,10 +10,11 @@ A collection of my n8n automation workflows. Each workflow has its own folder wi
 | [Lead_Classification_workflow](Lead_Classification_workflow) | Receives leads through a webhook, validates and scores them (1-10), uses Gemini AI to read buying intent, classifies each as Hot, Warm, or Cold, saves to Google Sheets, and emails an alert for every Hot lead |
 | [Multi_platform_notifier](Multi_platform_notifier) | Receives a notification through a webhook (subject, message, priority), routes it by priority (High, Medium or Low) to Gmail, Slack and Telegram in parallel, retries failed deliveries, and logs every attempt with status and timestamp to Google Sheets |
 | [Price_drop_workflow](Price_drop_alert_workflow) | Checks product prices every 6 hours for multiple products, sends a Telegram alert when a price drops below its threshold, tracks price trend (rising/falling/stable), applies a 24-hour cooldown to avoid repeat alerts, and logs every check and API error to Google Sheets |
+| [Customer_query_reply](Customer_query_reply) | Receives customer queries through a webhook, uses OpenAI (GPT-4o-mini) to detect the category (Pricing, Refund, Support, Other) and sentiment, writes a personalized reply, alerts the team on Telegram for urgent, negative or unrecognized queries, logs every query to Google Sheets, and sends a daily summary report |
 
 ## Tools used
 
-n8n, Google Sheets, Gmail, OpenWeatherMap API, RSS feeds, Webhooks,Google Gemini,Slack,Telegram,DummyJSON API
+n8n, Google Sheets, Gmail, OpenWeatherMap API, RSS feeds, Webhooks,Google Gemini,Slack,Telegram,DummyJSON API,OpenAI (GPT-4o-mini)
 
 ## How to use a workflow
 
