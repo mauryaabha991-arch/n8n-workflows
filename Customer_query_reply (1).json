@@ -1,0 +1,360 @@
+{
+  "name": "Customer_query_reply",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer_query",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "983c5f2a-649a-47f1-945a-f616313ca2bc",
+      "name": "Webhook",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Customer name: {{ $json.body.name }}\nMessage: {{ $json.body.message }}",
+        "options": {
+          "systemMessage": "You are a customer support assistant for Your Company.\nRead the customer's message and return ONLY valid JSON, with no extra text, in this format:\n{\n  \"category\": \"Pricing | Refund | Support | Other\",\n  \"sentiment\": \"Positive | Neutral | Negative\",\n  \"priority\": \"High | Normal\",\n  \"reply\": \"a short, polite, personalized email reply\"\n}\n\nRules:\n- Pricing: plans start at ₹499/month, details at yourwebsite.com/pricing\n- Refund: refunds are allowed within 7 days, ask for the order ID\n- Support: contact support@yourcompany.com or 1800-000-000 (9am-6pm)\n- Other: thank them and say the team will reply within 24 hours\n- Priority is High if the customer is angry, negative, or uses words like urgent, immediately, asap\n- Address the customer by name and match their tone. Be empathetic if they are upset."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "4dc24aae-c0d5-4671-946f-76a3f2bd617a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        192
+      ],
+      "id": "4ce3b1bb-996f-4744-947b-dcda8a50ab66",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = $json.output || $json.text || '';\nlet data;\ntry {\n  data = JSON.parse(raw.replace(/```json|```/g, '').trim());\n} catch (e) {\n  data = {\n    category: 'Other',\n    sentiment: 'Neutral',\n    priority: 'High',\n    reply: 'Thank you for contacting us. Our team will reply within 24 hours.'\n  };\n}\n\nconst hook = $('Webhook').item.json.body;\n\nreturn {\n  json: {\n    name: hook.name,\n    email: hook.email,\n    message: hook.message,\n    category: data.category,\n    sentiment: data.sentiment,\n    priority: data.priority,\n    reply: data.reply,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "ac9b4244-d3f7-46a6-bcf7-9ff923cedf12",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "6c6808e3-2550-400d-96cf-886ed5c28cb9",
+              "leftValue": "={{ $json.priority }}",
+              "rightValue": "High",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cd5e0ddd-5e5e-45e7-a828-add25dced57d",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "Other",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "54422d61-542d-4267-a2a7-03a48f70fb81",
+              "leftValue": "={{ $json.sentiment }}",
+              "rightValue": "Negative",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        784,
+        0
+      ],
+      "id": "8d49a413-b176-4515-ae9b-9113c382dbe0",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=Customer: {{ $json.name }} ({{ $json.email }}) \nCategory: {{ $json.category }}\nSentiment: {{ $json.sentiment }} \nMessage: {{ $json.message }}  Please follow up personally.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        -160
+      ],
+      "id": "0dd8667a-268d-4b3a-b438-1708c6eec15b",
+      "name": "teams_telegram"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $('Code in JavaScript').item.json.reply }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1152,
+        16
+      ],
+      "id": "6a48779b-908a-436c-a7f4-ecd2d6d8fb01",
+      "name": "customer_telegram"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id",
+          "cachedResultName": "customer_query_reply"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Code in JavaScript').item.json.name }}",
+            "Email": "={{ $('Code in JavaScript').item.json.email }}",
+            "Query": "={{ $('Code in JavaScript').item.json.message }}",
+            "Category": "={{ $('Code in JavaScript').item.json.category }}",
+            "Sentiment": "={{ $('Code in JavaScript').item.json.sentiment }}",
+            "Timestamp": "={{ $('Code in JavaScript').item.json.timestamp }}",
+            "Priority": "={{ $('Code in JavaScript').item.json.priority }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Query",
+              "displayName": "Query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1376,
+        16
+      ],
+      "id": "2eccd7b9-b659-4301-8d5e-af1b9624681c",
+      "name": "company_sheet"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "teams_telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "customer_telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "teams_telegram": {
+      "main": [
+        [
+          {
+            "node": "customer_telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "customer_telegram": {
+      "main": [
+        [
+          {
+            "node": "company_sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}
