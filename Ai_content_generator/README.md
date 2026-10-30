@@ -32,6 +32,9 @@ Webhook -> Validate Input -> Valid?
                          '- no  -> Mark Rejected
 ```
 
+### Workflow Canvas
+![Workflow canvas](Screenshot.png)
+
 ## Setup
 
 ### 1. Google Sheet
