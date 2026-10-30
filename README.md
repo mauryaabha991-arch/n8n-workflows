@@ -11,6 +11,7 @@ A collection of my n8n automation workflows. Each workflow has its own folder wi
 | [Multi_platform_notifier](Multi_platform_notifier) | Receives a notification through a webhook (subject, message, priority), routes it by priority (High, Medium or Low) to Gmail, Slack and Telegram in parallel, retries failed deliveries, and logs every attempt with status and timestamp to Google Sheets |
 | [Price_drop_workflow](Price_drop_alert_workflow) | Checks product prices every 6 hours for multiple products, sends a Telegram alert when a price drops below its threshold, tracks price trend (rising/falling/stable), applies a 24-hour cooldown to avoid repeat alerts, and logs every check and API error to Google Sheets |
 | [Customer_query_reply](Customer_query_reply) | Receives customer queries through a webhook, uses OpenAI (GPT-4o-mini) to detect the category (Pricing, Refund, Support, Other) and sentiment, writes a personalized reply, alerts the team on Telegram for urgent, negative or unrecognized queries, logs every query to Google Sheets, and sends a daily summary report |
+| [Ai_content_generator](Ai_content_generator) | Receives a topic and content type through a webhook, validates the input and checks Google Sheets for duplicates (returning stored content if found), writes the content with an OpenAI AI Agent in the chosen tone, length and language, saves it to Google Sheets, sends it for Gmail approve/reject, posts approved content to Slack, and logs API errors |
 
 ## Tools used
 
