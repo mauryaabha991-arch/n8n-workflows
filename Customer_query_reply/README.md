@@ -24,6 +24,12 @@ Webhook (POST) -> AI Agent (GPT-4o-mini) -> Code (parse JSON) -> IF (escalate?)
                                                                   |-- false ----------------------->  Telegram (customer reply) -> Google Sheets
 ```
 
+### Workflow Canvas
+![Workflow canvas](Screenshot.png)
+
+### Workflow Canvas
+![Workflow canvas](Screenshot1.png)
+
 | Node | Purpose |
 |---|---|
 | Webhook | Receives `POST /customer_query` with name, email, message |
