@@ -1,0 +1,149 @@
+{
+  "name": "Error Summary Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b24d30ea-dce4-4196-a50f-2bf301871608",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "error_log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "812379ca-a4d5-4ff6-b15e-5d596d4c0080",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Your googleSheetsOAuth2Api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst since = $now.minus({ hours: 24 });   // use { days: 7 } for weekly\n\nconst recent = rows.filter(r => {\n  if (!r.Timestamp) return false;\n  const t = DateTime.fromFormat(r.Timestamp, 'yyyy-MM-dd HH:mm:ss');\n  return t.isValid && t >= since;\n});\n\n// Slack requires these 3 characters to be escaped\nconst esc = (s) => String(s ?? '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nconst count = (key) => recent.reduce((a, r) => {\n  const k = r[key] || 'Unknown';\n  a[k] = (a[k] || 0) + 1;\n  return a;\n}, {});\n\nconst byWf = count('Workflow_name');\nconst bySev = count('Severity');\n\nconst lines = (o) => Object.entries(o)\n  .map(([k, v]) => `• ${esc(k)}: *${v}*`)\n  .join('\\n') || '• None';\n\nconst latest = recent.slice(-5)\n  .map(r => `• ${esc(r.Timestamp)} | ${esc(r.Workflow_name)} | ${esc(r.Failed_node)} | ${esc(r.Error_message)}`)\n  .join('\\n') || '• None';\n\nconst text =\n`📊 *n8n Error Summary (last 24 hours)*\nTotal errors: *${recent.length}*\n\n*By severity*\n${lines(bySev)}\n\n*By workflow*\n${lines(byWf)}\n\n*Latest errors*\n${latest}`;\n\nreturn [{ json: { total: recent.length, text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "047c20b6-711e-4046-897c-a5de07be541f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "YOUR_SLACK_CHANNEL_ID",
+          "mode": "list",
+          "cachedResultName": "your-slack-channel"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        0
+      ],
+      "id": "a08c7141-feea-4616-9725-48d9eefa4f3b",
+      "name": "Send a message",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Your slackOAuth2Api"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": []
+}
