@@ -11,35 +11,61 @@ An n8n setup that detects failures in other workflows, classifies their severity
 - **Real-time alert:** a Slack message with a colour-coded severity and a link to the failed execution.
 - **Handler safety net:** a separate fallback workflow alerts you if the handler itself fails.
 - **Summary report:** a scheduled Slack summary of errors by severity and workflow.
-- **Retry for transient errors:** "Retry On Fail" on external-service nodes (3 tries, 2-5 s wait).
+- **Retry for transient errors:** Retry On Fail on external-service nodes (3 tries, 2-5 s wait).
 - **Dashboard:** Google Sheets charts for errors per day, per workflow and per severity, plus a total.
 
 ## Architecture
 
 ```
 Any monitored workflow ──(fails)──▶ Error_detection
-                                      │
-      Error Trigger → Extract Error Details → Add Severity → Slack alert → Google Sheets log
-                                      │
-                      (if the handler itself fails)
-                                      ▼
-                           Error handler Fallback → Slack "handler failed"
+
+  Error Trigger → Extract Error Details → Add Severity → Slack alert → Google Sheets log
+                                  │
+                  (if the handler itself fails)
+                                  ▼
+                       Error handler Fallback → Slack "handler failed"
 
 Error Summary Report:  Schedule → Get rows (Sheets) → Build summary (Code) → Slack
 ```
 
 Slack runs **before** Sheets on purpose. If logging fails, the admin still gets the alert, and the failed handler run triggers the fallback.
 
-## Repository contents
+## Folder structure
 
-| File | Purpose |
-|---|---|
-| `workflows/01-error-detection.json` | Main handler (Error Trigger, severity, Slack, Sheets) |
-| `workflows/02-error-handler-fallback.json` | Alerts when the handler fails |
-| `workflows/03-error-summary-report.json` | Scheduled Slack summary |
-| `workflows/04-test-failure.json` | Webhook workflow that throws a custom error for testing |
+```
+Error Detection/
+├── README.md
+├── Workflows/
+│   ├── error-detection.json          Main handler
+│   ├── error-handler-fallback.json   Alerts when the handler fails
+│   ├── error-summary-report.json     Scheduled Slack summary
+│   └── test-failure.json             Webhook workflow that throws a custom error
+└── Workflow Screenshots/
+    ├── Screenshot Error Detection.png
+    ├── Screenshot Error Handler Fallback.png
+    ├── Screenshot Error Summary Report.png
+    └── Screenshot Test Failure.png
+```
 
-All credentials, IDs and webhook paths in these exports are placeholders.
+All credentials, IDs and webhook paths in the exported JSON files are placeholders.
+
+## Screenshots
+
+**Error Detection (main handler)**
+
+![Error Detection](<Workflow Screenshots/Screenshot Error Detection.png>)
+
+**Error handler Fallback**
+
+![Fallback](<Workflow Screenshots/Screenshot Error Handler Fallback.png>)
+
+**Error Summary Report**
+
+![Summary](<Workflow Screenshots/Screenshot Error Summary Report.png>)
+
+**Test Failure workflow**
+
+![Test Failure](<Workflow Screenshots/Screenshot Test Failure.png>)
 
 ## Setup
 
@@ -59,23 +85,22 @@ Create two credentials: **Google Sheets OAuth2** and **Slack OAuth2**. The Slack
 
 ### 3. Import the workflows
 
-For each file in `workflows/`: n8n → **Create workflow** → **⋯ → Import from file**.
+For each file in `Workflows/`: n8n → **Create workflow** → **⋯ → Import from file**.
 
 Then in each workflow:
 
 1. Select your own Google Sheets and Slack credentials on the nodes.
-2. Select your sheet and your Slack channel (the `YOUR_...` placeholders).
+2. Select your sheet and your Slack channel (replace the `YOUR_...` placeholders).
 3. Under **Settings → Error Workflow**, wire the chain:
-   - `Error handler Fallback` is set as the error workflow of **Error_detection**
-   - **Error_detection** is set as the error workflow of every workflow you want to monitor (including the test workflow)
-   - Optionally set Error_detection as the error workflow of the fallback too
-4. Save and **Publish** all workflows.
+   - `Error handler Fallback` is the error workflow of **Error_detection**
+   - **Error_detection** is the error workflow of every workflow you want to monitor, including the test workflow
+4. Save and **Publish** all four workflows.
 
-If an import complains about the `REPLACE_WITH_...` error workflow ID, delete that setting before importing and select the workflow from the dropdown afterwards.
+If an import complains about a `REPLACE_WITH_...` error workflow ID, remove that setting before importing and pick the workflow from the dropdown afterwards.
 
 ### 4. Schedule
 
-`03-error-summary-report.json` is set to run **daily at 09:00**. Set the workflow timezone in **Settings** to match your sheet timestamps.
+`error-summary-report.json` runs **daily at 09:00**. Set the workflow timezone in **Settings** to match your sheet timestamps.
 
 ## Severity rules
 
@@ -89,33 +114,39 @@ Defined in the `Add Severity` Code node (checked on the lower-cased error messag
 
 Critical wins over Warning. For example, `Database connection timeout` is Critical.
 
-## Testing
+## Testing with Postman
 
 The Error Trigger fires only on **production** runs, not on manual "Execute" clicks.
 
-1. Publish `04-test-failure.json` and copy its **Production URL**.
-2. Send a POST with a JSON body, for example:
+1. Import and **Publish** `test-failure.json`, and copy the **Production URL** from its Webhook node (the path with `/webhook/`, not `/webhook-test/`).
+2. In Postman, create a request:
+   - **Method:** `POST`
+   - **URL:** `https://<your-n8n-host>/webhook/test-failure`
+   - **Body:** `raw` → `JSON`
+3. Send each body below, waiting about 10 seconds between requests.
 
-```bash
-curl -X POST "https://<your-n8n-host>/webhook/test-failure" \
-  -H "Content-Type: application/json" \
-  -d '{"message": "401 Unauthorized"}'
-```
+| # | Postman body | Expected severity |
+|---|---|---|
+| 1 | `{"message": "Intentional test failure"}` | Warning |
+| 2 | `{"message": "401 Unauthorized"}` | Critical |
+| 3 | `{"message": "ETIMEDOUT connection timed out"}` | Warning |
+| 4 | `{"message": "Field 'topic' is required"}` | Info |
+| 5 | `{"message": "404 Not found"}` | Info |
+| 6 | `{"message": "Cannot read properties of undefined (reading 'name')"}` | Critical |
+| 7 | `{"message": "Database connection timeout"}` | Critical |
+| 8 | `{"message": "429 Too Many Requests"}` | Warning |
 
-| Body message | Expected severity |
-|---|---|
-| `Intentional test failure` | Warning |
-| `401 Unauthorized` | Critical |
-| `ETIMEDOUT connection timed out` | Warning |
-| `Field 'topic' is required` | Info |
-| `404 Not found` | Info |
-| `Cannot read properties of undefined` | Critical |
-| `Database connection timeout` | Critical |
-| `429 Too Many Requests` | Warning |
+For each request, confirm:
 
-Each request should produce a Slack alert, a new sheet row, and a successful `Error_detection` execution.
+- A **Slack alert** arrives with the right colour (🔴 Critical, 🟠 Warning, 🔵 Info), the workflow name, the failed node, the error message and an execution link.
+- A **new row** appears in the sheet with Severity, Date and Timestamp filled in.
+- A new `Error_detection` execution appears, marked Succeeded.
 
-**Testing the fallback:** break the Sheets node (wrong document), keep its *On Error* setting at *Stop Workflow*, and trigger a failure. You should get the normal alert, a failed `Error_detection` run, and a message from the fallback workflow.
+Postman will show an error response for these calls, which is expected because the test workflow throws on purpose.
+
+**Testing the fallback:** point the Sheets node at the wrong document, keep its *On Error* setting at *Stop Workflow*, and send request #2. You should get the normal Slack alert, a failed `Error_detection` run, and a message from the fallback workflow. Restore the Sheets node afterwards.
+
+**Testing the summary:** open `Error Summary Report` and click **Execute workflow**. The Slack message should show the total, counts by severity and workflow, and the latest five errors.
 
 ## Retry on transient errors
 
@@ -132,21 +163,19 @@ I1: =QUERY(Sheet1!A:I,"select G, count(A) where G is not null group by G label c
 M1: =COUNTA(Sheet1!A2:A)
 ```
 
-Insert charts: column (errors per day), bar (by workflow), pie (by severity), scorecard (total). For richer filtering, connect the sheet to Looker Studio.
+Insert charts: column (errors per day), bar (by workflow), pie (by severity), scorecard (total).
 
 ## Known limitations
 
-- An error workflow cannot catch its own failures. That is why the separate fallback exists.
-- Failures that are *handled* inside a workflow (for example a validation branch returning HTTP 400) do not count as errors, so they are not logged.
+- An error workflow cannot catch its own failures, which is why the separate fallback exists.
+- Failures handled inside a workflow (for example a validation branch returning HTTP 400) are not errors, so they are not logged.
 - Retry On Fail can duplicate a write in the rare case where the first attempt succeeded but timed out.
-- The automatic re-run of failed executions through the n8n API was not implemented. It needs an API key.
-
-## Security
-
-- Never commit credentials, API keys or n8n instance IDs.
-- Re-export workflows through the sanitizing step before committing changes (see `.gitignore`).
-- Rotate any credential you accidentally commit.
+- Automatic re-run of failed executions through the n8n API was not implemented, since it needs an API key.
 
 ## Tech stack
 
-n8n Cloud, Google Sheets API, Slack API, JavaScript (Code nodes).
+n8n Cloud, Google Sheets API, Slack API, JavaScript (Code nodes), Postman (testing).
+
+## Security
+
+No credentials are stored in this repository. Never commit API keys, OAuth tokens or n8n instance IDs, and rotate anything that was committed by mistake.
